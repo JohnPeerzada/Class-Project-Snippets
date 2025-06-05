@@ -1,0 +1,187 @@
+---
+title: "Homework #4"
+author: "John Peerzada"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggfortify)
+library(ggplot2)
+library(emmeans)
+library(GGally)
+library(lindia)
+```
+
+## Problem 1
+
+A study was conducted to assess the effect of caffeine on reaction time in subjects under sleep deprivation. Subjects were randomly assigned to receive either caffeine or a placebo (13 subjects per group).   In the data set, 1=caffeine and 2=placebo. Then they were subjected to four days of total sleep deprivation (the first day is labeled Day 0 and the last day is labeled Day 3). Each day, their reaction time was measured with seven tests throughout the day. On each test, the researchers recorded the number of psychomotor vigilance performance lapses, defined as the number of times the subjects took longer than 500ms to respond. For each day, they recorded each subject's average lapses across the tests from that day. The tests were performed at the same times each day for each subject. The data are in caffeine.csv.
+
+### Read Data
+
+```{r}
+caffeine <- read.csv("caffeine.csv")
+glimpse(caffeine)
+```
+
+### Part 1
+
+Identify the following design elements in this study: the experimental units, the response variable(s), the factor, factor levels, the treatments. What did the experimenters do to control variability?
+
+- Experimental Units: **A person with sleep deprivation** 
+
+- Response Variable: **The number of pyschomotor vilagance laspes** 
+
+- Factors: **the type of treatments** 
+
+- Factor Levels: **There are 2 factor levels, caffeine and placebo** 
+
+- Treatments: **Caffeine and Placebo** 
+
+
+- Controls: **Random assignment of subjects and performing the laspes test at the same time each day.** 
+
+### Part 2
+
+What type of analysis makes the most sense for this study design? How do the factors in this study fit into this design? Justify your choice.
+
+**The analysis that makes the most sense would be a repeated measures analysis as each person is measured at the same time over a multitude of days which allows for within-subjects correlation** 
+
+### Part 3
+
+(Data Cleaning) Perform the following two data cleaning steps:
+
+a. The data are currently in wide format, but for the analysis, you will need it in long format. Convert the data from wide to tall format. 
+
+b. Add meaningful labels to the factor levels. Convert any variables to factors if needed.
+
+```{r}
+caffeineClean <- caffeine %>%
+  pivot_longer(cols = starts_with("Day"), 
+               names_to = "Day",
+               values_to = "Lapses")
+caffeineClean$Treatment <- factor(caffeineClean$Treatment, 
+                                  levels = c(1, 2),
+                                  labels = c("Caffeine", "Placebo"))
+```
+
+### Part 4
+
+(EDA) Create an appropriate plot for visualizing this data set. You must use meaningful labels in this plot. Describe your observations based on the plot. 
+
+```{r, message=F}
+ggplot(caffeineClean, aes(x = Day, y = Lapses, color = Treatment)) +
+  geom_point() +
+  facet_wrap(~Subject, scales = "free_y") +
+  labs(title = "Psychomotor Vigilance Performance Lapses Over Days",
+       x = "Day",
+       y = "Number of Lapses",
+       color = "Treatment") +
+  theme_minimal()
+```
+
+**There seems to be a positive correlation between the numbers of days the the total number of laspes in the test.** 
+
+### Part 5
+
+Fit the appropriate model for this study. Explain your results, citing the test statistic(s), degrees of freedom, and the p-value(s). What are your conclusions in the context of the problem?
+
+```{r}
+ModelStudy <- lm(Lapses ~ Treatment * Day, data = caffeineClean)
+summary(ModelStudy)
+sum <- emmeans(ModelStudy, ~Treatment)
+sum
+
+```
+
+**The F-Statistic is 12.28 with degrees of freedom at 96, and the Treatment Placebo variable has a p-value of 0.0652 which is less than the p-value so we can reject the null hypothesis and in context of the problem we can say that there might be a difference in the average number of lapses between the Caffeine and Placebo groups.** 
+
+### Part 6
+
+If necessary, perform multiple comparisons and explain the results. If multiple comparisons are not necessary, explain why. 
+
+**The multiple comparisons show that on average the Placebo group has a higher number of lapses compared to the caffeine group because the p-value is so low.** 
+
+```{r}
+emmeans(ModelStudy, pairwise ~ Treatment, adjust = "tukey")
+
+```
+
+## Problem 2
+
+**Description**: Undergraduate students at Cal Poly collected data on the prices of 42 horses advertised for sale on the Internet. The response variable of interest is the price of the horse (in \$) and the predictors are the sex and height (in cm) of the horse. The data are in HorsePrices.csv.
+
+### Part 1
+
+Read in the data and remove any columns from the data set that are not needed for the model.
+
+```{r}
+horse <- read.csv("HorsePrices.csv")
+horse <- horse %>%
+  select(-HorseID)
+
+
+```
+
+### Part 2
+
+Construct a scatterplot matrix of all variables. Describe any discernible patterns you see.
+
+```{r}
+scatter_matrix <- ggpairs(data = horse)
+print(scatter_matrix)
+
+```
+
+**There is a big difference in height and price between male and female horses.** 
+
+### Part 3
+
+Fit the multiple regression modeling the price of the horse as a function of the sex and height.
+
+```{r}
+HorseModel <- lm(Price ~ Sex + Height, data = horse)
+HorseModel
+```
+
+### Part 4
+
+Perform a residual analysis of the fitted model. Do you see any concerns regarding the assumptions we make in linear regression?
+
+```{r}
+autoplot(HorseModel)
+```
+
+**For the residuals vs fitted we can see that the assumption of linearity is questionable because there should be a random scattering of points at 0 with no discernible pattern and it looks like there are 2 groups of data that are in vertical lines.** 
+
+### Part 5
+
+Construct a Box-Cox transformation plot to the fitted model in Part 3. Does the plot recommend any transformation on the response variable?
+
+```{r}
+gg_boxcox(HorseModel)  
+
+```
+
+**Because the Lambda values are close to 1 that means no transformation of the response variable is needed.** 
+
+### Part 6 and Part 7
+
+Interpret the intercept term for the fitted model from part 3. Does it contextually make any sense? Interpret the slope coefficients for the fitted model from part 3.
+```{r}
+summary(HorseModel)
+```
+
+
+**The intercept term for the model from part 3 is used to see predictor that are equal to 0, in this context it doesn't make much sense for the intercept to be zero because the price wouldn't be zero if the height or the sex of the horse is 0 as well. The slope coefficient for sex shows there is difference between male and female horse as male horses cost more money and the height coefficient shows that when a horses height increases by a centimeter its price increase by around $11.** 
+
+### Part 8
+
+Interpret the residual standard error and adjusted R2.
+
+**The residual standard error which is 1240 shows us on average that the models predictions deviate from the actual prices by 1240 dollars. For the adjusted R2 it is 0.3269 and this shows us that the predictors in the horse model explain 32% of probability in the horse prices.** 
+

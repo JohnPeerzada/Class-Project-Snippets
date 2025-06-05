@@ -1,0 +1,112 @@
+---
+title: "Homework 2"
+date:  "Last complied on `r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+
+
+1. An A/B test results in 18 successes in 223 trials for version A and 26 successes in 287 trials for version B.  What is the probability that the true proportion of version A is larger than the true proportion for version B. i.e. $P(p_a>p_b$)? Hint: Use the Beta-Binomial Model.
+
+```{R}
+n_sim <- 10000
+
+a_posterior <- rbeta(n_sim, 18 + 1, 223 - 18 + 1)
+b_posterior <- rbeta(n_sim, 26 + 1, 287 - 26 + 1)
+
+prob_a_greater_b <- mean(a_posterior > b_posterior)
+
+cat("Probability that p_a > p_b:", prob_a_greater_b)
+
+```
+
+
+[Booking.com](https://www.booking.com/) ran a test in July of 2019 to evaluate the addition of logos next to its booking options (see below):
+
+![](booking.png)
+
+The company ran the experiment for two weeks and among the various response was the average spend for each user.  Describe the treatment and response for this experiment.
+
+2. What is the treatment and what is the response for the Booking.com experiment?
+## The treatment is the addition of the logos next to the options when booking
+## The Response is how much an avergae user spends
+
+
+3. Read in the data from "booking.csv".  What is the average spend and standard deviation of spend for each version?  I find it best to use the `stringsAsFactors=TRUE` argument in my `read.csv()` statement here.
+
+```{r}
+df<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/booking.csv")
+head(df)
+
+summary_stats <- df |>
+  dplyr::group_by(variant) |>
+  dplyr::summarize(
+    average_spend = mean(user_spend),
+    sd_spend = sd(user_spend)
+  )
+
+print(summary_stats)
+
+```
+
+4. Visualize the data by each variant.  Use any graph you feel shows the distribution of spend the best.  Comment on your findings.  
+
+```{r}
+ggplot2::ggplot(df, ggplot2::aes(x = variant, y = user_spend)) +
+  ggplot2::geom_boxplot() +
+  ggplot2::theme_minimal() +
+  ggplot2::labs(title = "Distribution of Spend by Variant", y = "User Spend", x = "Variant")
+
+```
+
+
+
+5. Find a 95% confidence interval for the difference in average spend for each variant.  
+
+```{r}
+t_test_result <- t.test(user_spend ~ variant, data = df)
+
+ci_diff <- t_test_result$conf.int
+
+cat("95% Confidence Interval for the difference in average spend:", ci_diff)
+
+```
+
+
+6. Give a sentence explaining that interval so that anyone can understand what the test results are showing. 
+## The 95% confidence interval for the difference in average spend shows us that the range that we expect the difference in average spend to be between -5.577 and -0.2482
+
+
+
+7. For the version with the highest spend, what spend can booking.com expect to see if they implemented the best version from above? Use a 95% confidence interval?  Hint: first use the `filter` command from `tidyverse` to make a data frame containing only the values from the best variant.  Then use `t.test` to perform a single sample test.
+
+
+```{r}
+best_variant <- summary_stats |>
+  dplyr::filter(average_spend == max(average_spend)) |>
+  dplyr::pull(variant)
+
+best_variant_data <- df |>
+  dplyr::filter(variant == best_variant)
+
+t_test_best <- t.test(best_variant_data$user_spend)
+
+ci_best <- t_test_best$conf.int
+
+cat("95% Confidence Interval for the best variant's spend:", ci_best)
+
+```
+
+
+8. Interpret the interval above in a sentence that anyone from Booking.com can understand.
+## The 95% confidence interval for the best version's spend provides a range within which Booking.com can expect the average spend per user to be between 11.32 and 15.12.
+
+
+

@@ -1,0 +1,47 @@
+---
+title: "Etsy Filter Test"
+date:  "Last complied on `r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE,
+                      message = FALSE)
+
+```
+
+[Etsy](https://www.etsy.com/) the global online market place, ran a filter experiment on their listing pages. Below you will see an example of the control and then the two other versions they tested. They measured the sales for each of the versions.
+
+## Control 
+
+![](Etsy control.png)
+
+ 
+
+## Version B
+
+Version B contained (1) collapsed and slide out filters (see below), (2) had condensed categories, (3) larger and higher product titles, and (4) more visible sorting.
+
+![](Etsy version a.png)
+
+### Slide out filters
+
+![](Etsy version a slide out filter.png)
+
+## Version C
+
+The third version of the page contained an (5) exposed "shop by interest" which included things like "Mid Century Modern", "Woodworking", etc.
+
+![](Etsy version c.png)
+
+The data for the experiment is contained in the file "etsy test.csv". Use this data to produce an analysis in R or R markdown.  Be sure to annotate your analysis so you know what you did.  Then produce a slide deck from your analysis in R markdown to communicate your results and your recommendation.  Make sure to recommend one version and have an analysis to back that up.
+
+```{r}
+df<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/etsy_test.csv")
+head(df)
+
+
+```
+

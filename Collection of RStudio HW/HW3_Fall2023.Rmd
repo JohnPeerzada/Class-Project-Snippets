@@ -1,0 +1,249 @@
+---
+title: "Homework #3"
+author: "John Peerzada"
+date: "2023-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(knitr)
+library(ggfortify)
+library(emmeans)
+library(ggplot2)
+```
+
+
+## Problem 1
+
+**Description**: Golf is one of the most popular recreational sports in the United States.
+The *driver* is one of the more important clubs as a golfer will use it when wishing to hit the ball off a tee for very long distances.  
+The act of hitting a golf ball requires precision, skill and stength but the club can influence a shot as well.
+A golf manufacturer is looking to improve their product line of golf drivers.
+Four protoype drivers
+
+* Driver 1: mass of 270g and a length of 117.5cm
+* Driver 2: mass of 290g and a length of 116.2cm
+* Driver 3: mass of 310g and a length of 115.0cm
+* Driver 4: mass of 340g and a length of 113.4cm
+
+The manufacturer recruited 6 different golfers to test each of the four drivers. 
+Each golfer used each driver once, in a random order, and the manufacturer recorded several variables related to the shot. 
+Of particular interest to the manufacturer is determining if certain drivers result in longer distance shots. The distance of shots is stored in variable *totdist*.
+
+### Read Data
+
+Data Entry and processing
+
+```{r}
+golf_data <- read.csv("golf_driver.csv")
+```
+
+### Part 1
+
+Identify the following design elements in this study: the experimental units, the response variable(s), the factor, factor levels, the treatments. What did the experimenters do to control variability?
+
+* **experimental units:** **The Golfers**
+
+* **response variable:** **Length of the distance shots**
+
+* **If there is any confounding variable, What is it? How is it controlled?** **There isn't a confounding variable.**
+
+* **the factor:** **The type of driver**
+
+* **factor levels:** **There are four factor levels, corresponding to each driver.**
+
+* **treatments:** **the treatments are the four drivers**
+
+* **What other steps were taken to control for nuisance variables and unexplained variability?****The people experimenting made sure to randomize the order in which golfers used each driver.**
+
+
+
+
+
+### Part 2
+
+(Data Cleaning) Create a reduced data set that only contains the variables we need. Convert any variables to factors if needed, using meaningful factor labels where possible. 
+
+```{r}
+
+golf_clean <- golf_data %>%
+  select(golfer, driver, totdist)
+
+golf_clean$driver <- factor(golf_clean$driver, levels = 1:4, labels = c("Driver 1", "Driver 2", "Driver 3", "Driver 4"))
+
+
+```
+
+
+### Part 3
+
+What type of analysis makes the most sense for this study design? How do the factors in this study fit into this design? Justify your choice.
+
+**The Anova design makes the most sense for this study as Anova finds out if there are statistically significant differences in mean shot distances among the four driver types. Because each golfer used each driver Anova will help us in determining which driver had the greatest effect.**
+
+
+### Part 4
+
+(EDA) Create an appropriate plot for visualizing this data set. You must use meaningful labels in this plot. Describe your observations based on the plot. 
+
+
+```{r}
+ggplot(data = golf_clean, aes(x = driver, y = totdist)) +
+  geom_boxplot(fill = "red") +
+  labs(x = "Driver Used", y = "Distance Shot", title = "Distance By Driver Type")
+```
+
+**Some observations by looking at the graph is that they are mostly similar in mean and distances but they are some variation in variations for each driver used as Driver 2 being the least variation and Driver 3 being the most variation.**
+
+### Part 5
+
+Fit the appropriate model for this study. Check the assumptions of this model. You need to provide your graphs and your comments about the model assumptions based on your findings from these graphs.
+
+```{r}
+
+golfAOV <- aov(totdist ~ driver, data = golf_clean)
+autoplot(golfAOV)
+
+```
+
+**The residuals vs fitted plot does not show any strong variation from the horizontal line so linearity assumption is reasonable. The assumption of normality from QQ plot stands to seem that it might be questionable as there are very obvious tails in both ends of the data.**
+
+
+### Part 6
+
+Explain your results, citing the test statistic(s), degrees of freedom, and the p-value(s). What are your conclusions in the context of the problem? **Use the significant level $\alpha=0.01$**
+
+```{r}
+summary(golfAOV)
+
+```
+
+
+**There are 20 and 3 degrees of freedom respectively which a test statistic of 0.348, and because the p-value 0.791 > 0.01 that means we fail to reject the null hypothesis. This means that there is no strong evidence to conclude that the four different drivers have a significant effect on the shot distance.**
+
+### Part 7
+
+If necessary, perform multiple comparisons and explain the results. If multiple comparisons are not necessary, explain why.
+
+**There is no need to do any multiple comparisons because of the Anova results. They showed us that there is no discernible difference among the four drivers in terms of there impact on shot distance, so because multiple comparisons are used on results that are discernible there is no use on doing the test on this data.**
+
+
+
+
+
+
+
+## Problem 2
+
+**Description**: A completely randomized factorial laboratory experimental design was used to study the effects of washing cycles and pre-washed methods on the abrasion of denim jeans.  Pre-washed, stone-washed, and cellulase enzyme washed jeans were the garment washed denim treatments. The laundering cycles were zero (control group), five, and 25; Edge abrasion is the measure response. A total of 90 samples were utilized; 30 of each of the three garment washed denim treatments (pre-washed, stone-washed, and cellulase enzyme washed). From each group of 30 samples, ten samples were randomly assigned to each of the three laundering cycles (0/5/25). Samples were independently rated for edge abrasion after a fixed laundering interval. The data set is in file ``denim_abrasion.csv`` .
+
+Below is the information for each column of the data set:
+
+* Laundry Cycles (1= Control (0), 2=5 Launderings, 3=25 Launderings) 
+
+* Denim Treatment (1=Pre-washed, 2=Stone-Washed, 3=Enzyme Washed)
+
+* Abrasion: Abrasion score
+
+
+Data Source : A. Card, M.A. Moore, M. Ankeny (2006). "Garment Washed Jeans: Impact of Launderings on Physical Properties," International Journal of Clothing Science and Technology, Vol. 18, 1/2, pp. 43-52.
+
+### Part 1
+
+Identify the following design elements in this study: the experimental units, the response variable(s), the factor, factor levels, the treatments. What did the experimenters do to control variability?
+
+* **experimental units:** **Denim Jean Samples**
+
+* **response variable:** **The Abrasion score**
+
+* **If there is any confounding variable, What is it? How is it controlled?** **There isn't a confounding variable.**
+
+* **the factor:** **the factors are the number of laundry cycles and the different denim treatments**
+
+* **factor levels:** **there are 6 factor levels, 3 from the Denim treatments, and 3 from the Laundry cycles**
+
+* **treatments:** **there are 9 treatments as a treatments is a combination of a denim treatment and laundry cycle**
+
+* **What other steps were taken to control for nuisance variables and unexplained variability?****The experimenters randomly assigned samples to each treatment group so that there wouldn't be any bias or  controlled variability.**
+
+### Part 2
+
+What type of experimental design was used by the researcher? Justify your answer by identifying how the factors in this study fit into this design.
+
+**The experimenter did a completely randomized factorial experimental design. This approach randomizes the combinations of treatments to the experimental units, and it makes sure each combination of treatments is given to each experimental so it inst biased**
+
+### Part 3
+
+Convert any variables to factors if needed, using meaningful factor labels where possible. 
+
+```{r}
+denim_abrasion <- read.csv("denim_abrasion.csv") 
+denim_abrasion$CyclesFactor <- factor(denim_abrasion$Cycles, 
+                                       levels = c(1, 2, 3), 
+                                       labels = c("Control (0)", "5 Launderings", "25 Launderings"))
+
+denim_abrasion$DenimFactor <- factor(denim_abrasion$Denim,
+                                       levels = c(1, 2, 3),
+                                       labels = c("Pre-washed", "Stone-Washed", "Enzyme Washed"))
+
+```
+
+### Part 4
+
+(EDA) Create an appropriate plot for visualizing this data set. You must use meaningful labels in this plot. Describe your observations based on the plot. 
+
+```{r}
+ggplot(data = denim_abrasion, aes(x = DenimFactor, y = Abrasion, fill = CyclesFactor)) +
+  geom_boxplot() +
+  labs(x = "Denim Treatment", y = "Abrasion Score", title = "Abrasion by Denim Treatment and Laundry Cycles")
+
+```
+
+**By my observation I can say that there is a higher mean abrasion scores using the Pre-washed and enzyme washed treatments compared to the stone washed. I can also see that there is a lot of variance and a couple outliers in each cycle factor for each denim treatment**
+
+### Part 5
+
+Fit the appropriate model for this study. Check the assumptions of this model. You need to provide your graphs and your comments about the model assumptions based on your findings from these graphs.
+
+```{r}
+
+DenimAOV <- aov(Abrasion ~ DenimFactor * CyclesFactor, data = denim_abrasion)
+
+autoplot(DenimAOV)
+```
+
+**The Residuals vs Fitted Plot does not show any variance from the horizontal line so assumption of linearity is good. The qq plot shows whether the assumption of normality is met or not and by looking at it, it seems that the data is normal.** 
+
+
+### Part 6
+
+Completely investigate the effects of interest using Analysis of Variance.  Explain your results, citing the test statistic(s), degrees of freedom, and the p-value(s). What are your conclusions in the context of the problem?
+
+```{r}
+summary(DenimAOV)
+
+```
+
+**The degrees if freedom are 81, 4, 2, 2 respectively, with a F-Statistic of 31.183. Because the p-value 9.07e-11 < 0.05, this means we can reject the null hypothesis. This means that there is evidence that indicates that at least one factor has a significant effect on Denim Abrasion.** 
+
+
+### Part 7
+
+If necessary, perform multiple comparisons and explain the results. If multiple comparisons are not necessary, explain why.
+
+
+```{r}
+DenimTukey <- emmeans(DenimAOV, specs = ~ DenimFactor * CyclesFactor)
+
+DenimPair <- pairs(DenimTukey, adjust = "tukey")
+DenimPair
+
+```
+
+
+**Looking at the general p-value for each of the treatments it seems that Pre-Washed vs the other 2 treatments, Pre-washed always seems to have lower Denim Abrasion scores compared to the others, also when comparing Enzyme-washed vs the other 2 treatments, Enzyme washed seems to have higher abrasion scores compared to the others.**
+
+
+

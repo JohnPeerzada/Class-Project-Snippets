@@ -1,0 +1,189 @@
+---
+title: "STA363 Homework 6"
+author: "John Peerzada"
+date: "11/13/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Note: there are a lot of packages required for this assignment, so we have labeled what each is used for
+library(tidyverse)
+library(knitr) # for kable
+library(ggfortify) # for autoplot
+library(GGally) # for scatterplot matrices
+library(car) # for VIFs and subsets
+library(leaps) # for best subsets selection
+library(broom) # for the glance function
+library(tidymodels)
+library(lindia)
+```
+
+Create a clean (no unnecessary output) and well-formatted RMarkdown file that answers the two problems below (note that problems 2 contains multiple parts). Use ## and ### to separate parts of the document with headers to improve readability. 
+
+
+## Problem 1
+
+In class recently, we have started discussing model validation studies. Explain how *model validation* differs from *model building*.
+
+**Model validation is the process of looking at the performance of a model, while Model building is the process of creating a model using a data set.**
+
+
+## Problem 2
+
+**Description**: The regression cancer rate document attached with this assignment provides the background information. 
+
+
+## Part 1
+
+The variable **Geography** may be used to identify the counties with unusual observations, but it is not used to predict the response variable. After removing it from the data set, draw a scatterplot matrix of all the numeric variables in the data. Do you see any preliminary evidence of multicollinearity or unusual observations (outliers and high leverage points)?  Discuss.
+
+
+```{r, cache= TRUE, message= FALSE}
+cancer <- read.csv("cancer_reg.csv")
+cancer <- select(cancer, -Geography)
+ggpairs(cancer)
+
+```
+
+**It seems there might be some outliers for a couple different variables, mainly Incidence rate, TARGET_Death rate and popest2015. I don't see any evidence of high leverage points but the outliers could lead to multicollinearity**
+
+## Part 2
+
+Fit a full main effects model to predict mean per capita (100,000) cancer mortality from all other available numeric predictors, and perform a check of the regression assumptions using residual plots. If any assumptions appear seriously violated, perform a proper transformation to address them and refit the model.
+
+## Initial fit
+
+```{r, cache= TRUE}
+CancerModel <- lm(TARGET_deathRate ~ ., data = cancer)
+
+autoplot(CancerModel, which = c(1, 2, 3, 4))
+```
+
+**Looking at the Residuals vs fitted plot, the linearity looks pretty good as everything is centered and random. For normatility we are good because the dots on the Normal Q-Q plot are following the line. **
+
+## Part 3
+
+Perform a full model ANOVA F-test on your proper full model from Part 2 and interpret the result. 
+
+
+```{r, cache= TRUE}
+CancerAOV <- anova(CancerModel)
+CancerAOV
+```
+
+**The incidenceRate, medIncome, PctBachDeg25_Over, PctUnemployed16_Over, and PctMarriedHouseholds variables have low p-values, indicating they are significant. **
+
+## Part 4
+
+Perform a formal assessment of multicollinearity from your proper full model in Part 2.  Comment on the results. 
+
+
+```{r, cache= TRUE}
+CancerVIF <- car::vif(CancerModel)
+print(CancerVIF)
+```
+
+**The variables MedianAgeMale and MedianAgeFemale show high VIF values (11.41 and 12.23). This indicates a strong correlation between the median ages of males and females in the database, so this high level of multicollinearity might be difficult in finding the effects of these variables on the response.**
+
+## Part 5
+
+Identify outliers and high influential points if there are any. The number of outliers and the number of high influential points can be different, so choose the number of points you want to label properly as we did in In-class assignment.
+
+
+```{r, cache= TRUE}
+CancerOUT <- influence(CancerModel)$hat > 2 * mean(influence(CancerModel)$hat)
+True <- which(CancerOUT)
+True
+```
+
+**These are all the outliers considered by the model created.**
+
+## Part 6 
+
+There is one extremely high leverage observation. Identify the county and discuss whether the observation is legitimate or not. 
+
+
+```{r}
+CancerLEV <- row.names(cancer)[influence(CancerModel)$hat > 2 * mean(influence(CancerModel)$hat)]
+CancerHighestLEV <- cancer[as.numeric(CancerLEV), ]
+print(CancerHighestLEV)
+```
+
+**On page 8 we can find row 1000 which is the country identified as the highest leverage. This is because popest2015 is 10170292, which is much more than any other row in this data set.**
+
+
+## Part 7
+
+Fit a new full model to the data after removing all the unusual observations you identified in Part 5, and provide a side-by-side listing of the estimated -coefficients from the original fitted model in Question 3 and this new model in this part.  Does it appear those observations have a substantial impact on the fitted model?  What do you think we should do with these observations, keep them or remove them?  Justify your answer. (Important note: if you chose to use a transformation in Question 3, be sure you maintain the usage of that transformation for this new model and all subsequent models you fit in this assignment)
+
+
+```{r}
+CancerOUT2 <- influence(CancerModel)$hat > 2 * mean(influence(CancerModel)$hat)
+CancerCleaned <- cancer[!CancerOUT2, ]
+model2 <- lm(TARGET_deathRate ~ ., data = CancerCleaned)
+cbind(coefficients(CancerModel), coefficients(model2))
+```
+
+**It appears the removal of the outliers had an impact on the coefficients, this is justified as it made the coefficients more liek eachother given it an overall tighter fit.**
+
+## Part 8
+
+Perform a backward stepwise variable selection.  Which predictors are retained using this method?
+
+```{r}
+step.pick.backward <- stats::step(CancerModel, direction="backward")
+summary(step.pick.backward)
+
+```
+
+**incidenceRate, medIncome, popEst2015, povertyPercent, AvgHouseholdSize, PctBachDeg25_Over, PctUnemployed16_Over, PctMarriedHouseholds, and BirthRate**
+
+## Part 9
+
+Perform a forward stepwise variable selection.  Which predictors are retained using this method?
+
+```{r}
+step.pick.forward <- stats::step(CancerModel, direction="forward")
+summary(step.pick.forward)
+```
+**incidenceRate, medIncome, popEst2015, povertyPercent, AvgHouseholdSize, PctBachDeg25_Over, PctUnemployed16_Over, PctMarriedHouseholds, and BirthRate**
+
+## Part 10
+
+Perform a best subsets regression based on BIC.  What would you say are **the two best competing models using this method**?
+
+
+```{r}
+CancerSub <- regsubsets(TARGET_deathRate ~ ., data = cancer, method = "exhaustive", nvmax = 10)
+summary(CancerSub)$bic
+```
+
+**The best two competing models based on BIC would be the models with the BIC value of -598.79 and -595.97**
+
+
+## Part 11
+
+Construct a professionally formatted table that allows you to compare all five fitted models (full model, backwards selection, forward selection, and the two best models from best subsets) via adjusted R, AIC and BIC.
+
+```{r}
+ModelTable <- data.frame(
+  Model = c("Full Model", "Backward Selection", "Forward Selection"),
+  AIC = c(AIC(CancerModel), AIC(step.pick.backward), AIC(step.pick.forward)),
+  BIC = c(BIC(CancerModel), BIC(step.pick.backward), BIC(step.pick.forward))
+)
+
+kable(ModelTable)
+```
+
+
+## Part 12
+
+Using the various measures of model fit in Part 11, select the one model you deem to the “best”, and justify your selection.
+
+
+```{r}
+summary(step.pick.backward)
+```
+
+**Based on the AIC and BIC values this model is the best model, this is because whenever you have lower AIC or BIC values it gives a better prediction between model fit and the complexity of the model. **

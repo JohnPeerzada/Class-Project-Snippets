@@ -1,0 +1,53 @@
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+#Need to put .csv in working directory
+data <- read.csv("ArtificialDietComparison.csv")
+head(data)
+
+```
+
+```{r}
+data <- read.csv("ArtificialDietComparison.csv", na.strings = c("NA", "")) |>
+  dplyr::filter(!is.na(Species) & !is.na(Diet_Type)) |>
+  dplyr::mutate(Group = paste(Species, Diet_Type))
+data <- data |> dplyr::filter(Group != "CV P_het")
+cleandata <- data %>%
+  filter(!is.na(Days_hatching_to_pupation) & !is.infinite(Days_hatching_to_pupation) &
+         !is.na(Weight_g) & !is.infinite(Weight_g))
+cleanlongdata <- cleandata %>%
+  gather(key = "Variable", value = "Value", Days_hatching_to_pupation, Weight_g)
+
+dataTable <- data |> 
+  dplyr::group_by(Group) |>
+  dplyr::summarize(
+    Mean_Days = mean(Days_hatching_to_pupation, na.rm = TRUE),
+    Mean_Weight_g = mean(Weight_g, na.rm = TRUE),
+    Survival_Percent = 100 * sum(!is.na(Weight_g)) / dplyr::n()
+  )
+
+print(dataTable)
+```
+```{r}
+ggplot(cleanlongdata, aes(x = Group, y = Value, fill = Variable)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(
+    title = "Box Plot of Days to Pupation and Weight by Group",
+    x = "Group",
+    fill = "Variable"
+  ) +
+ scale_fill_manual(values = c("lightblue", "lightgreen")) +
+  theme_minimal() +
+  facet_wrap(~ Variable, scales = "free_y", labeller = labeller(Variable = c(
+    "Days_hatching_to_pupation" = "Days to Pupation",
+    "Weight_g" = "Weight (g)"
+  ))) +
+ theme(
+    legend.position = "none",  # Remove the legend
+    axis.title.y = element_text(size = 12)  # Adjust y-axis title size
+  )
+```
+

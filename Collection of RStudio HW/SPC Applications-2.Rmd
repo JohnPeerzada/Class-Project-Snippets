@@ -1,0 +1,142 @@
+---
+title: "SPC Applications"
+date:  "Last complied on `r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+
+## Purchase Order Tracking
+
+A large aerospace operation is evaluating the level of nonconforming purchase orders placed with the company's suppliers. A nonconforming purchase order is a purchaser order with an error such as specifying an incorrect part number, wrong delivery date, or wrong supplier information.  They sample 100 purchase orders each week. The samples and the count of defective purchase orders are contained in the file "purchase_order.csv".
+
+1. What type of chart would you recommend for this type of data?
+**P-chart**
+
+2. Make the appropriate control chart below.
+
+```{R}
+library(qcc)
+library(tidyverse)
+
+df<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/purchase_order.csv")
+head(df)
+
+qcc(df$nonconforming, df$n, type="p")
+
+```
+
+
+3. If the purchase order defect process is behaving in a stable and predictable manner, estimate the proportion of nonconforming purchase orders the company can expect moving forward.
+
+```{r}
+totalNonConform <- sum(df$nonconforming)
+totalInspect <- sum(df$n)
+prop <- totalNonConform / totalInspect
+prop
+```
+
+
+## Application Loading Times
+
+The IT Department at a large corporation is concerned about the time it takes to load an application across the network.  The would like to implement an $\bar{X}$ and $R$ chart so that this time can be monitored and improvements can be made to this loading time.  Over the past 25 days, they have randomly selected five application loading and monitored the time from start to completion.  The data is contained in the file "loading_times.csv".
+
+1. Read in the data.
+
+```{r}
+df<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/loading_times.csv")
+head(df)
+```
+
+2. Is this data subgrouped data (multiple samples per time period) or individual data (one sample per time period)?  Is this data numeric (continuous) or categorical?
+
+**The data is subgrouped, as there are multiple samples per time period.**
+
+3. Construct a chart to assess if the within day variation is stable.
+
+```{r}
+rchart <- qcc(df, type = "R")
+```
+
+4. Construct a chart to assess if the between day variation is stable.
+
+```{r}
+xbarchart <- qcc(df, type = "xbar")
+
+```
+
+5. If both charts show no violations make an estimate of the average application loading time.
+
+```{r}
+meanApp <- mean(c(df$Sample_1, df$Sample_2, df$Sample_3, df$Sample_4, df$Sample_5))
+meanApp
+```
+
+
+6. The IT department has made some changes that they hope to lower the loading times.  They wish to continue to monitor the loading times after these changes.  Read in the data "new_loading_times.csv" and call it something different from the original data. 
+
+```{R}
+newdf<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/new_loading_times.csv")
+head(df)
+```
+
+7. Make a chart to assess the changes in the within day variabilty. Add the `newdata=` argument to the `qcc` and assign the data frame you read in above to that object.  Comment on any changes in the within day variation.
+
+```{r}
+rchartnew <- qcc(df, type = "R", newdata = newdf)
+
+```
+
+
+8. Make a chart to assess the changes in the between day variability. Add the `newdata=` argument to the `qcc` and assign the data frame you read in above to that object.  Comment on any changes in the loading times after this change.
+
+```{r}
+rchartnew <- qcc(df, type = "xbar", newdata = newdf)
+```
+
+9.  Make a new set of R and Xbar charts using only the new data.  This will be the new baseline for the application loading times moving forward.  Provide the average loading time.
+
+```{R}
+rchart <- qcc(newdf, type = "R")
+xbarchart <- qcc(newdf, type = "xbar")
+newmeanApp <- mean(c(newdf$Sample_1, df$Sample_2, df$Sample_3, df$Sample_4, df$Sample_5))
+newmeanApp
+```
+
+## Monitoring Production Yeild
+
+You are supply chain manager at Precision Manufacturing Inc., a company that produces microchips. One critical metric in the production process is the yield rate—the percentage of microchips that pass quality control testing. Maintaining a high and stable yield rate is essential for profitability.
+
+Recently, a new supplier was introduced for one of the key materials used in the manufacturing process. Management wants to monitor the yield rate over the next several weeks to ensure that the change doesn’t negatively affect production quality. The data is contained in the file "yield_data.csv". The target yield rate, established in the baseline period, is 98.5.
+
+1. Is this data subgrouped data (multiple samples per time period) or individual data (one sample per time period)?  Is this data numeric (continuous) or categorical?
+
+```{r}
+df<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/yield_data.csv")
+head(df)
+```
+
+2. Create a EWMA chart with L=3, $\lambda$=0.2 and using the target yeild rate mentioned above.  
+
+```{r}
+ewna_chart <- ewma(df$YieldRate, center=98.5, lambda = 0.2, nsigmas = 3)
+```
+
+3. Is there evidence the new supplier is maintaining the required yield? Why or why not?
+**There is evidence that the new supplier is maintaining the required yield as the points are in statistical control.**
+
+4. For fun, calculate the first two points that will be plotted on the EWMA chart.
+```{r}
+firstpoint = 0.2*98.59353+(1-0.2)*98.5
+firstpoint
+secondpoint = 0.2*99.49801+(1-0.2)*98.5
+secondpoint
+```
+
+

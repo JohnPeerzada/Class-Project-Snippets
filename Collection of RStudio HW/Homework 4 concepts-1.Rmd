@@ -1,0 +1,113 @@
+---
+title: "Homework 4 Concepts"
+date:  "Last complied on `r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE,
+                      message = FALSE)
+```
+
+The file "amazon.csv" contains 1000 observations on each of 8 variables.  "engagement" is a response variable corresponding to an experiment, "treatment" where 0 denotes control and 1 denotes treatment which was randomly assigned. The rest of the variables are covariates. Use this file to answer the following questions.
+
+1. Read in the data summarize the engagement by treatment. 
+
+```{r}
+df<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/amazon.csv")
+head(df)
+summary(df$engagement ~ df$treatment) 
+```
+
+2. The treatment had no effect.  Perform a test to verify this.
+
+```{r}
+t.test(engagement ~ treatment, data = df)
+```
+
+
+3. Test to see if subgrouping by covariate gender shows a different mean engagement by the treatment. A 1=Female for the gender variable. Test for both the "1" group and one for the "0" group.
+
+```{r}
+t.test(engagement ~ treatment, data = df[df$gender == 1,])
+t.test(engagement ~ treatment, data = df[df$gender == 0,])
+```
+
+4. Test to see if subgrouping by covariate iphone shows a different mean engagement by the treatment.  A 1=yes it was an iphone used to access amazon. Test for both the "1" group and one for the "0" group.
+
+```{r}
+t.test(engagement ~ treatment, data = df[df$iphone == 1,])
+t.test(engagement ~ treatment, data = df[df$iphone == 0,])
+```
+
+5.  Test to see if subgrouping by covariate app shows a different mean engagement by the treatment.  A 1=yes the app was used to access amazon. Test for both the "1" group and one for the "0" group.
+
+```{r}
+t.test(engagement ~ treatment, data = df[df$app == 1,])
+t.test(engagement ~ treatment, data = df[df$app == 0,])
+
+```
+
+6. Test to see if subgrouping by covariate new_user shows a different mean engagement by the treatment.  A 1=yes the user was new to amazon. Test for both the "1" group and one for the "0" group.
+
+
+```{r}
+t.test(engagement ~ treatment, data = df[df$new_user == 1,])
+t.test(engagement ~ treatment, data = df[df$new_user == 0,])
+
+```
+
+7. Find the median of the "value" column.  This is a measure of customer value.
+
+```{r}
+med <- median(df$value, na.rm = TRUE)
+med
+
+```
+
+8. Test to see if subgrouping based on the median  of "value" (lower and higher) shows a different mean engagement by the treatment. Test for both the group above the median and the group at and lower than the median of value.
+
+
+```{r}
+df$value <- ifelse(df$value > med, 1, 0)
+
+t.test(engagement ~ treatment, data = df[df$value == 1,])
+t.test(engagement ~ treatment, data = df[df$value == 0,])
+
+```
+
+9. Find the 95th percentile of last_pur.
+
+```{r}
+percent <- quantile(df$last_pur, 0.95, na.rm = TRUE)
+percent
+```
+
+
+10. Test to see if subgrouping based on the top 5% of last_pur and the bottom 95% (including the 95th percentile) of last_pur shows a different mean engagement by the treatment. Test for both the groups.
+
+```{r}
+df$othPercent <- ifelse(df$last_pur > percent, 1, 0)
+t.test(engagement ~ treatment, data = df[df$othPercent == 1,])
+t.test(engagement ~ treatment, data = df[df$othPercent == 0,])
+```
+
+
+11. Which subgroups show an effect?
+**For each of the subgroups the p-value did not indicate there was a significant difference in each treatment except for the New user subgroup, this treatment had a p-value of 0.03179 which is less than our value of 0.05.**
+
+
+12. Which tests that you did above are causal? Why or why not?
+**The only test that is causal is the overall test, this is because the treatment for the test is random, having a random treatment gets rid of any chance for confounding variables. The other tests for the various sub groups are not causal because we have them seperated into groups, and these groups are not random causing them to not be causal.**
+
+
+
+13. Your boss, who is an MU grad, calls you into his office. He has checked the source of the referrals to the landing page. He shows you the following:
+
+![](Capture.png)
+
+
+"So version A does better on each source, but does worse overall?  What is the meaning of this?  Should we implement version A or version B?".  How do you answer your boss?
+**I would explain what Simpson's paradox is to them, this is where a trend in values appears in groups but reverses when the values are combined, this can occur when the distribution of the values are uneven leading to misleading data, this is why it is important to check for the proportion of values for each group and make sure that you keep that into account when analyzing data.**

@@ -1,0 +1,150 @@
+---
+title: "Homework 5 Concepts"
+date:  "Last complied on `r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE,
+                      message = FALSE)
+library(ggplot2)
+library(tidyr)
+library(agricolae)
+
+```
+
+
+
+
+A company wishes to test the market for a new snack.  The factor of interest is the advertising campaign. This is taking place in Europe so the product description on the package is in four different languages.  Four types of campaigns are considered, and four different descriptions are considered. The various test campaigns were conducted in four cities, 1, 2, 3, and 4.  Sales in thousands of dollars were recorded. See page 187 in your text for a description of the factor levels. The data is contained in the "snacks.csv" file.  Note, the most common use of an LSD is with two blocking factors, but this does not necessarily have to be the case. 
+
+
+1. What are the factor(s)?
+**The different kinds of advertising campaigns.**
+
+
+2. What are the blocking factor(s)?
+**There are two blocking factors in this design, one of them are the four cities, and the other are the four languages.**
+
+
+3. Visualize the results of this design. Hint: look at the Designing Tests for Small Samples Notes
+
+```{r}
+Snacks<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/snacks.csv", stringsAsFactors = TRUE)
+#ChatISA made this plot
+ggplot(Snacks, aes(x = Campaign, y = Sales, fill = Campaign)) +
+  geom_boxplot() +
+  labs(title = "Sales by Advertising Campaign",
+       y = "Sales (Thousands)",
+       x = "Campaign") +
+  theme_minimal()
+```
+
+4. Run the analysis to check and see if the advertisements had any effect on the sales. Make sure the degrees of freedom are correct!  You do not have to do the follow up analysis here.
+
+```{r}
+Snacks$Description <- as.factor(Snacks$Description)
+Snacks$City <- as.factor(Snacks$City)
+anova <- aov(Sales ~ Campaign + City + Description, data = Snacks)
+summary(anova)
+
+```
+
+5. Check the assumption that the residuals are normally distributed.  Make the plot and comment on it.
+
+```{R}
+qqnorm(residuals(anova))
+qqline(residuals(anova))
+```
+**Looking at the Q-Q plot we can see that the points follow the ref line close enough to assume that normality is valid**
+
+
+6. Check to see if the residuals have a constant variance. You only have to look at the treatment factor.  Make the plot and comment on it.
+
+```{R}
+# ChatISA made this plot
+plot(anova$fitted.values, anova$residuals,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values",
+     ylab = "Residuals")
+abline(h = 0, col = "red")
+
+```
+**The Residuals chart shows scattered points evenly but randomly around zero, this suggests constant variance is valid.**
+
+7. Assuming that the data is in listed in the order in which is collected, plot the residuals vs. time to see if there is a trend. Make the plot and comment on it.
+
+```{r}
+# ChatISA made this plot
+plot(seq_along(anova$residuals), anova$residuals,
+     type = "b",
+     xlab = "Observation Order (Time)",
+     ylab = "Residuals",
+     main = "Residuals vs Time")
+abline(h = 0, col = "red")
+
+```
+**For the Residuals vs Time plot the rises and falls, appear to be random and there are no stretches of positive or negative numbers, this suggests that the assumption for independence is valid.**
+
+8. If appropriate run a follow up TukeyHSD test on the treatment. If not appropriate state why.
+```{r}
+TukeyHSD(anova, "Campaign")
+```
+
+
+Miami is running an experiment attempting to entice more students to eat on campus.  They sent out mailers with a different offer to students.  One offer was "bring a friend for free" another was "take a to-go bag" and lastly "50% off one meal".  They measured the total spend on campus dining for each offer. They know that different years (First Year, Second Year, Third Year, Fourth Year+) on-campus eating habits are different, but they would like to make a conclusion about the offer that appeals to all students, regardless of their year in school.   The data is contained in the file "miami_dining.csv".  
+
+9. Visualize the results of the experiment.  Make sure you get the order correct on a graph (hint first years come before second years, etc.).  Make your graph presentation ready!
+
+```{r}
+Miami<-read.csv("https://raw.githubusercontent.com/weeseml/ISA365/main/miami_dining.csv", stringsAsFactors = TRUE)
+
+MiamiL <- pivot_longer(Miami, cols = c("PerctOff", "Togo", "Friend"),
+                           names_to = "Offer", values_to = "Spend")
+MiamiL$Year <- factor(MiamiL$Year, 
+                          levels = c("First Year", "Second Year", "Third Year", "Fourth Year+"))
+
+#ChatISA made this plot
+ggplot(MiamiL, aes(x = Year, y = Spend, fill = Offer)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Dining Spend by Offer and Year",
+       x = "Year",
+       y = "Average Spend",
+       fill = "Offer") +
+  theme_minimal()
+
+```
+
+10. Provide a numerical summary of the data that shows the spend by treatment.
+
+```{R}
+aggregate(. ~ Year, data = Miami, FUN = mean)
+```
+
+11. Run the appropriate analysis and make a conclusion about the dining experiment.
+
+```{r}
+MiamiAnova <- aov(Spend ~ Offer + Year, data = MiamiL)
+summary(MiamiAnova)
+
+TukeyMiami <- aov(Spend ~ Offer + Year, data = MiamiL)
+TukeyHSD(TukeyMiami, "Offer")
+```
+**We can conclude from the ANOVA that both the offer and the student's year have a statistically significant effect on how much they spend on campus dining. We can see this from the p-values from each variable, the p-value for the offer variable is 0.000127 and for year it is 0.0000247 which both are well below the 0.05 significance level, indicating strong evidence against the null hypothesis. Now that we know multiple variables are significant we ran a tukey test. The results show that the Bring a Friend for Free offer increases more significantly campus dining spend compared to both the 50% Off One Meal and Take a To-Go Bag offers.**
+
+12. Kroger is testing out different produce layouts in it's 5 pre-designated testing stores.  These stores are chosen based on the the demographics of their customers.  They will test layouts produce configurations 1-5 during 5 months of testing.  Produce an appropriate design for this scenario and show it below.  Make sure the treatments are in a random order.
+
+```{r}
+layouts <- c("Layout 1", "Layout 2", "Layout 3", "Layout 4", "Layout 5")
+outdesign <- design.lsd(layouts, seed = 365, randomization = TRUE)
+lsd <- outdesign$book
+
+levels(lsd$row) <- c("Store A", "Store B", "Store C", "Store D", "Store E")
+levels(lsd$col) <- c("January", "February", "March", "April", "May")
+lsd
+```
+
+
+

@@ -1,0 +1,265 @@
+---
+title: "STA363 Homework 7"
+author: "John Peerzada"
+date: "12/07/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Note: there are a lot of packages required for this assignment, so we have labeled what each is used for
+library(tidyverse)
+library(ggfortify) # for autoplot
+library(GGally) # for scatterplot matrices
+library(caret) # for cross-validation
+library(leaps)
+library(knitr)
+library(gridExtra)
+library(lindia)
+library(car)
+```
+
+Create a clean (no unnecessary output) and well-formatted RMarkdown file that answers the two problems below (note that both problems contain multiple parts). Use ## and ### to separate parts of the document with headers to improve readability. 
+
+
+## Problem 1
+
+**Description**: The data set spotify2022.csv contains audio information about songs from the 15 most popular albums of 2022, according to billboard.com. You can find information about the variables for the audio features on the Spotify API website: https://developer.spotify.com/documentation/web-api/reference/get-several-audio-features
+
+The goal of this problem is to create a predictive model for a song's popularity (in Spotify, based on the rate at which each track is played by users) based on the audio features. This model will then be used to predict the popularity for songs that have been released recently, using the file spotify2023_predict.csv. 
+
+```{r}
+spotify <- read.csv("spotify2022.csv")
+glimpse(spotify)
+```
+
+
+### Part 1
+
+Create a scatterplot matrix with all the  **numerical** variables (except artist name, album name, track name, explicit and mode) Describe your observations.
+
+```{r, message=FALSE}
+SpotifyScatter <- spotify %>%
+  select(danceability, energy, loudness, speechiness, acousticness, instrumentalness, liveness, valence, tempo, duration_ms, popularity)
+ggpairs(SpotifyScatter)
+```
+#It seems there may be outliers in the speechiness and instrumnetaless variables, loudness and energy are highly correlated, and acousticness and energu also seem to be highly correlated.#
+
+### Part 2
+
+Fit each of the following candidate models to use for prediction of popularity:
+
+#### 2a
+
+A full model with all of the predictors (except artist name, album name, and track name).
+
+```{r}
+Spotify_Full <- lm(popularity ~ . - artist_name - album_name - track_name - explicit - mode, data = spotify)
+summary(Spotify_Full)
+```
+
+#### 2b 
+
+A backward selection model. List the predictors chosen by this method.
+
+```{r}
+Spotify_Backwards <- step(Spotify_Full, direction = "backward")
+summary(Spotify_Backwards)
+```
+
+##It chose the predicters, danceability, acousticness, valence, and duration_ms.##
+
+#### 2c
+
+A forward selection model. List the predictors chosen by this method.
+
+```{r}
+Spotify_Forwards <- step(Spotify_Full, direction = "forward")
+summary(Spotify_Forwards)
+```
+
+#The model did not remove any predictors so all the predicters in the full model are selected..#
+
+#### 2d
+
+Find another model using the best subset regression. If the model selected by the best subset regression is identical to the backward selection model or the forward selection model. Use the second best model. List the predictors chosen by this method.
+
+```{r, message = FALSE}
+Spotify_Best_Subset <- regsubsets(popularity ~ . - artist_name - album_name - track_name - explicit - mode, data = spotify)
+Spotify_SubSet_Sum <- summary(Spotify_Best_Subset)
+best_model_index <- which.max(Spotify_SubSet_Sum$adjr2)
+Spotify_Best_Subset <- lm(as.formula(paste("popularity ~", paste(names(coef(Spotify_Best_Subset, id = best_model_index)[-1]), collapse = " + "))), data = spotify)
+summary(Spotify_Best_Subset)
+```
+#The predicters chosen by this method are danceability, acousticness, liveness, valence, temp, and duration_ms.#
+
+
+
+
+### Part 3
+
+Conduct **repeated 5-fold cross-validation study 20 times** with the 4 models from Part 2 (full, backward, forward, and additional model). Before each model, set the seed to 363, so the training and testing sets are consistent. 
+
+```{r, warning = FALSE}
+set.seed(363)
+Spotify_Full_CV <- train(
+  popularity ~ . - artist_name - album_name - track_name - explicit - mode,
+  data = spotify,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5, repeats = 20)
+)
+Spotify_Backwards_CV <- train(
+  popularity ~ danceability + energy + loudness + speechiness + 
+    acousticness + liveness + valence + tempo + duration_ms,
+  data = spotify,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5, repeats = 20)
+)
+Spotify_Forwards_CV <- train(
+  popularity ~ danceability + energy + loudness + acousticness + 
+    liveness + valence + tempo + duration_ms,
+  data = spotify,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5, repeats = 20)
+)
+Spotify_Best_Subset_CV <- train(
+  popularity ~ danceability + acousticness + valence + tempo + duration_ms,
+  data = spotify,
+  method = "lm",
+  trControl = trainControl(method = "cv", number = 5, repeats = 20)
+)
+summary_CV <- list(
+  Full_model = Spotify_Full_CV,
+  Backwards_model = Spotify_Backwards_CV,
+  Forwards_model= Spotify_Forwards_CV,
+  Best_Subset_model = Spotify_Best_Subset_CV
+)
+```
+
+
+### Part 4
+
+Use resamples to compare the results from the models in Part 3. Which model performed the best?
+
+```{r}
+summary(resamples(summary_CV))
+```
+# These test shows that the BestSubsetModel has a higher MAE and RMSE compared to the other models and it has a higher mean Rsquared value, these two factors show that the model has a better performance.#
+
+
+### Part 5
+
+Use the chosen model to predict the popularity for the songs from the 2023 data. Which song (by ID) do you predict will be the most popular? **You need to remove the “eval=FALSE” code chunk option once you complete the code; otherwise, it does not execute the code in the knitted file.**
+
+```{r}
+spotify2023 <- read.csv("spotify_april2023.csv")
+Spotify_Full <- lm(popularity ~ danceability + energy + loudness + speechiness + 
+                   acousticness + mode + instrumentalness + liveness + 
+                   valence + tempo + duration_ms, data = spotify)
+popularity <- predict(Spotify_Full, newdata = spotify2023)
+spotify2023$popularity <- as.integer(popularity)
+spotify2023 %>%
+  arrange(desc(popularity)) %>%
+  select(track_id, popularity) %>%
+  head()
+```
+
+#The song that will be the most popular will be track id, 589aAz8258JEsMwpJglalU.#
+
+
+## Problem 2
+
+This data set was analyzed in [Muggeo and Ferrara (2008)](https://ideas.repec.org/a/eee/csdana/v52y2008i5p2529-2537.html "Muggeo and Ferrara (2008)"). It contains information from 683 production workers, and it recorded the following variables: 
+
+ 
+* `kwit`	-- *"binary outcome, with value of 1 indicating if the worker quits within six months of starting a new job, 0 otherwise"*
+* `y`	-- *"numerical observed standardized physical productivity measure for the worker after the initial training period"*  
+* `sex`	-- *"a dummy variable for the workers’ sex, 0=female, 1=male"*
+* `dex`	-- *"a score on a physical dexterity exam administered before the worker was hired"*
+* `lex`	-- *"the number of years of education of the worker"*
+* `job_tenure`	-- *"actual duration of employment"*
+* `censored`	-- *"censoring indicator, if the censoring indicator is 0 then the corresponding duration is censored, i.e., they are observed by the end of the observation time period, but they entered the company less than 6 months by then."*
+  
+```{r}
+dat1  = read.table("http://www.econ.uiuc.edu/~roger/courses/471/data/weco.dat",header = TRUE)
+glimpse(dat1)
+```
+
+
+### Part 1
+
+What are the odds that a male production worker quits within six months of starting a new job?  What about a female production worker?
+
+```{r message = FALSE}
+Worker_Model <- glm(kwit ~ sex, data = dat1, family = "binomial")
+Male_Quit <- exp(predict(Worker_Model, newdata = data.frame(sex = 1), type = "link"))
+Female_Quit <- exp(predict(Worker_Model, newdata = data.frame(sex = 0), type = "link"))
+Male_Quit
+Female_Quit
+```
+#The odds that a male production worker quits within six months of starting a new job are  0.418, and the odds for a female production worker are  0.304.#
+
+
+
+### Part 2
+
+Fit a logistic regression model that uses a production worker's `y`, `sex`, and `lex` to predict the likelihood that they quit within six months of starting a new job. Provide model output that displays the estimated $\beta$-coefficients.
+
+```{r}
+Worker_Log_Model <- glm(kwit ~ y + sex + lex, data = dat1, family = "binomial")
+summary(Worker_Log_Model)
+```
+
+## Part 3
+
+Interpret the estimated intercept from your fitted model in terms of the odds that a worker quits within six months of starting a new job.  Does this value make practical sense in problem context?
+
+#Odds - exp(2.95) = 19.135. Yes, it does because what this value means is a measure of physical productivity, the odds of quitting within the next six months of starting a new job are estimated to be 19.135 times higher than the odds of not quitting.#
+
+## Part 4
+
+Interpret the estimated coefficients of `y`, `sex`, and `lex`in terms of the odds of quitting within six months of starting a new job.
+Based on the interpretations, find characterstics of people who will quit **less likely** within six months of starting a new job.
+
+#After interpreting the co-efficients, the people who will less likely quit within six months of starting a new job would be Female workers, having more years of education, and higher physical productivity measure.#
+
+## Part 5
+
+If a production worker had an additional 4 years of education, what would be the change in the odds of an quitting within six months of starting a new job?  (Assume sex and physical productivity measure are held fixed).
+
+```{r}
+Worker_Educated <- coef(Worker_Log_Model)["lex"]
+Odds1 <- exp(Worker_Educated)
+Odds4 <- Odds1^4
+Odds4
+```
+#The odds of a worker who has 4 years of education quitting within six months is less than 1, this means that the worker is less likely to quit if they have 4 years of education.#
+
+
+
+### Part 6
+
+Use your model to estimate the odds of quitting within six months of starting a new job for male production workers who has 9 years of education and a physical productivity measure of 11.
+
+```{r}
+New_Worker_Odds <- exp(predict(Worker_Log_Model, newdata = data.frame(y = 11, sex = 1, lex = 9), type = "link"))
+New_Worker_Odds
+```
+#The odds of quitting within six months of starting a new job for male production workers who has 9 years of education and a physical productivity measure of 11 is 1.05.#
+
+### Part 7
+
+Use your model to estimate the probability that a male production worker who has 9 years of education and a physical productivity measure of 11 quits a job within six months of starting a new job.
+
+```{r}
+New_Worker_Probability <- predict(Worker_Log_Model, newdata = data.frame(y = 11, sex = 1, lex = 9), type = "response")
+New_Worker_Probability
+```
+#The probability that a male production worker who has 9 years of education and a physical productivity measure of 11 quits a job within six months of starting a new job is 0.512.#
+
+
+
+
+
+
+

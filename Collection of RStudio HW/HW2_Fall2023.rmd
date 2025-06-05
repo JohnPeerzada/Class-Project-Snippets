@@ -1,0 +1,155 @@
+---
+title: "Homework #2"
+author: "John Peerzada"
+date: "September 19, 2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Create a clean (not unnecessary output) and well-formatted RMarkdown file that answers the two problems below (note both problems contains multiple parts). Use the #, ## and ### features to separate parts of the document to ease in reading.
+
+```{r warning=FALSE, message=FALSE}
+library(tidyverse)
+library(knitr)
+library(ggfortify)
+library(emmeans)
+```
+
+## Problem 1
+
+**Description**: A student hypothesized that the true mean grade point average (GPA) differs between male and female students at Miami University. In order to statistically test her hypothesis, she was provided with a randomly selected list of 2000 anonymous current female students and 2000 anonymous current male students from the Registrar. The GPAs and gender information are provided in the data set `Grade.csv`:
+
+```{r}
+Grade <- read.csv("Grade.csv")
+head(Grade)
+```
+
+Note that the data file `Grade.csv` should be in the same folder with your Rmarkdown file. The female and male students are coded 0 and 1, respectively. 
+
+
+ 
+### Part 1
+Cite whether the problem is from an observational study or a designed experiment and why.
+
+**This is an observational study because they didn't do anything to adjust or change the grades in the study. They are simply taking the already readily available grades from 200 random students without changing anything.**
+
+
+### Part 2
+Perform a meaning/helping EDA for this data. Comment on what you see, including comment on average and variation in GPA.  Make sure your plot is properly labeled and would be understandable to an outside viewer (that is, the labels and titles explain the context). 
+
+```{ rwarning=FALSE, message=FALSE}
+GPASum <- Grade %>%
+  group_by(Gender) %>%
+  summarize(Mean=mean(GPA),SD=sd(GPA),N=n())
+  kable(GPASum)
+  ggplot(Grade, aes(x = as.factor(Gender), y = GPA, fill = as.factor(Gender))) +
+    geom_boxplot() +
+    theme_bw() +
+    labs(x = "gender",y = "GPA",title = "Gpa by gender",
+      fill = "gender")
+```
+
+**Both genders GPA summary look pretty close, but it seems that the females have a small higher GPA score generally. The average GPA seems for the male students to hover over 3.2, while the female students hover over 3.3-3.4. The variation for the males seems to have a wider range with some outliers being farther apart, while for females seem to have a slightly narrower range with some outliers as well.**
+
+
+### Part 3
+Perform an appropriate statistical hypothesis test to determine if the true mean GPAs of male and female students differs significantly at Miami University.   Cite the test statistic value, degrees of freedom, *p*-value, and your conclusion in problem context.
+
+```{r rwarning=FALSE, message=FALSE}
+GPAtest <- t.test(gpa ~ gender, data = Grade)
+GPAtest
+```
+
+**For this analysis the degrees of freedom is 3997.9, the t statistic value is 3.2434 which given that the p value is 0.00119 > 0.05, we can conclude that there is enough evidence to reject the null hypothesis.So there is a significant difference in the mean GPA between the male and female students at Miami University. ** 
+
+### Part 4
+Use a 95% confidence interval to **estimate the size of the difference** in the true mean GPA of male and female students at Miami University (*hint:* the CI should be a part of your output for Part 3).  Interpret this interval in context.  Based on this interpretation, do you see any contradiction between the results of Parts 2 and 3?  How would you explain the contradiction to a layperson? (*hint:* read [this article](https://statisticsbyjim.com/hypothesis-testing/practical-statistical-significance/) regarding statistical significance and practical significance)
+
+**We are 95% confident that female students tend to have higher GPAs than male students at Miami university. Part 2 showed us that there were a significant difference between male and female students because the p value was less than the significant figure. Part 3 showed us that the true mean difference between men and women was between 0.0207 and 0.0841. If I were explaining this to a layperson I would say that based on the data there is a difference between men and women GPAs at Miami. But the actual difference is insignificant as the confidence interval is not vary large, which concludes that even though there is a big enough difference in the average of means, the GPA between men and women is generally not large enough to matter.**
+
+
+### Part 5
+State the assumption(s) for the statistical analysis you performed in Parts 3 and 4 and check if they are met. Please provide your graphs and your **comments** about the model assumptions based on your findings from these graphs. Based on this, discuss whether you trust that the conclusions you made in Parts 3 and 4 are valid. 
+
+```{r}
+anovaGPA <- aov(gpa ~ gender, data = Grade)
+autoplot(anovaGPA, which = c(1, 2))
+```
+
+**The two assumptions we have to check are for equal variance and normality. For the residuals vs fitted plot the blue line is horizontal to zero which satisfies th assumption of equal variance.For the normal Q-Q plot, the assumption of normality is questionable as both tails are bending downwards. Because the assumption of normality isnt fully satisfied I would take the test conclusion with a grain of salt, but I wouldn't throw it out entirely.**
+
+
+ 
+--------------------
+
+ 
+## Problem 2
+
+**Data source**: Bluman, A. (2012). Elementary Statistics A Step by Step Approach. (8th edition). N.Y.: McGraw-Hill Companies Inc. 
+
+**Description**:   A researcher wishes to try three different techniques to lower the blood pressure of individuals diagnosed with high blood pressure. The subjects are randomly assigned to three groups: the first group takes medication, the second group exercises, and the third group follows a special diet. After four weeks, the reduction in each person’s blood pressure is recorded. The data are shown in the Blood Pressure Data.  At   $\alpha$ = 0.05, is the effect of the three techniques statistically significant?  In other words, does the mean reduction in blood pressure differ for at least one group? If necessary run a follow up analysis.
+
+The data set `Blood Pressure.csv` is available from our Canvas site.  Note that the data file should be in the same folder as this Rmarkdown file.  Use the empty code chunk below to read the data into RMarkdown:
+
+
+The data set `Blood Pressure.csv` is available here:
+
+```{r}
+BP <- read.csv("Blood Pressure.csv")
+head(BP)
+```
+**Note that the data file `Blood Pressure.csv` should be in the same folder with your Rmarkdown file.**
+
+
+### Part 1
+Comment on the design of the experiment. Specifically state all the design elements in the context of the problem: the experimental units, the response variable(s), the factor, factor levels, the treatments, and the steps the experimenter took in an attempt to control for nuisance variation or confounding variables. 
+
+**The experimental units in the study are individuals who are diagnosed with high blood pressure. The response variables are the reduction in each persons blood pressure. The factor is the treatment applied to the individuals. There are three factor levels and three treatments which are medication, exercise, and special diet. The steps the experimenter took to control for variation and confounding variables was random assignment of experimental units to treatments which helps to reduce bias. Randomization like this helps control of confounding varialbles and variation across each treatment.**
+
+
+
+### Part 2
+Perform a meaningful numerical and graphical EDA for this data. Comment on what you see, including commenting on average and variation in Blood pressure.
+```{r}
+boxplot(BP ~ Group, data = BP,
+        main = "Reduction in Blood Pressure by Group",
+        xlab = "Group", ylab = "Reduction in Blood Pressure")
+```
+**Looking at the graph you can see that the average reduction in blood pressure is very varied as all three groups have very different mean Reduction. For variance in each group I would say it is similar for all 3 with it being a bit varied with only a couple of outliers for each treatment.**
+```{r}
+BPAOV <- aov(BP ~ Group, data = BP)
+summary(BPAOV)
+```
+
+**As the P-value is less than 0.05 we can conclude that there is a significant difference in means between the three groups.**
+
+
+### Part 3
+Perform the appropriate statistical analysis for this design. Cite the test statistic value, degrees of freedom, *p*-value, and the conclusion in problem context. Use significant level $\alpha=0.05$.
+
+**The test statistic value is 9.168 and the degrees of freedom are 2 and 12, given the fact that the p-value 0.00383 > 0.05 we can reject the null hypothesis. That means there is a significant difference in the mean reduction in blood pressure among the three treatment groups.**
+
+
+### Part 4 
+We need to check the model assumptions. Construct residual plots for the statistical method chosen in part 3 to check the model assumptions. You need to provide your graphs and your **comments** about the model assumptions based on your findings from these graphs.
+
+```{r}
+autoplot(BPAOV)
+```
+
+**For the residuals vs fitted values plot we can tell that it satisfies the assumption of linearity as the blue line is horizontal and straight. The normal Q-Q plot satisfies the assumption of normality because all the dots follow the line closely. The scale location plot satisfies the assumption of variance because the dots are not randomly scattered. The Residuals vs factor levels plot satisfies the assumption of observation because there are no outliers.**
+
+
+### Part 5
+Perform appropriate multiple comparisons if necessary and report the results in context.  You must provide a defense of your choice to use Tukey or Dunnett. 
+
+```{r}
+BPTukey <- emmeans(BPAOV, pairwise ~ Group)
+print(BPTukey)
+```
+
+**Based on the data given by the test we can conclude that there is no significant difference between the mean blood reduction between the Diet and Exercise group(P-Value 0.1466), or Diet and Medication(P-Value 0.1031) group. But for the Exercise and Medication(P-Value 0.0028) group there was a significant difference between them, so the treatment method of medication seems to have a significantly greater impact compared to the exercise group.I chose to use Tukey multiple comparison because Dunnett wasn't appropriate, because for Dunnett you need a control group which was absent from this study, also tukey is better when comparing multiple groups against each other.**
+

@@ -1,0 +1,207 @@
+---
+title: "Homework 5"
+author: "John Peerzada"
+date: "2023-10-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(knitr)
+library(GGally)
+library(ggfortify)
+library(lindia)
+```
+
+# Problem 1: 
+**Reality TV and Cosmetic Surgery** How much influence do the media, especially reality television programs have on one's decision to undergo cosmetic surgery? This was the question of interest to psychologists who published in an article in *Body Image: An International Journal of Research* (March 2010). In the study, 170 college students answered questions about their impression of reality TV shows featuring cosmetic surgery, level of self-esteem, satisfaction with their own body, and desire to have cosmetic surgery to alter their body. The variables analyzed in the study were measured as follows:
+
+**SELFESTM** Scale ranging from 4 to 40, where the higher the value the greater the level of self-esteem
+
+**BODYSAT** Scale ranging from 1 to 9, where the higher the value, the greater the satisfaction with one's own body
+
+**IMPREAL** Scale ranging from 1 to 7, where the higher the value, the more one believes reality television shows featuring cosmetic surgery are realistic
+
+**DESIRE** Scale ranging from 0 to 2, where the higher the value, the greater the interest in having cosmetic surgery
+
+**GENDER** 0 if female, 1 if male
+
+The data for this assignment is saved in Bodyimage.csv 
+
+The researchers were interested in modeling DESIRE as a function of SELFESTM, BODYSAT, IMPREAL, and GENDER.
+
+## Part 1
+**Read in the data and convert any variables to factors if needed, using meaningful factor labels where possible.** 
+
+```{r}
+Body <- read.csv("Bodyimage.csv", header=TRUE)
+Body$GENDER <- factor(Body$GENDER, levels = c(0, 1), labels = c("Female", "Male"))
+```
+
+
+## Part 2
+**Construct a scatterplot matrix of all the relevant variables. Describe any discernible patterns you see.**
+
+```{r}
+ggpairs(Body)
+```
+
+**It seems that only bodysat has a reasonably high correlation, with it being to selfestm. It appears that desire has a negative correlaion to selfestm, and bodysat.**  
+
+## Part 3
+**Fit the multiple regression modeling `DESIRE` as a function of `SELFESTM`, `BODYSAT`, `IMPREAL`, and `GENDER` and construct residual diagnostic plots of the fit. Do there appear to be any assumption violations?**
+
+```{r}
+model <- lm(DESIRE ~ SELFESTM + BODYSAT + IMPREAL + GENDER, data = Body)
+autoplot(model)
+```
+
+**Looks like linearity is good because of the even spread, and for normality plot, it also looks good because most of the points are on the line. Looks like no violations.**  
+
+## Part 4
+**Use a Box-Cox plot to determine whether a transformation of the response variable could improve the model fit. If the plot suggests a transformation, fit the model with that transformation and comment on the residual diagnostic plots for the revised model. Does it make sense to do a transformation?**
+
+```{r}
+gg_boxcox(model)
+```
+
+**Looks like this model needs to be transformed because the points are not near or approximately 1.** 
+
+
+```{r}
+
+model2 <- lm(sqrt(DESIRE) ~ SELFESTM + BODYSAT + IMPREAL + GENDER, data = Body)
+gg_boxcox(model2)
+autoplot(model2)
+```
+
+**It makes sense to do the transformation because it allows the data to fit into normaility more so the data is less impacted.** 
+
+
+## Part 5
+**Make a scatterplot matrix with the transformed response. Describe any discernible patterns you see.**
+
+```{r}
+ggpairs(Body)
+```
+
+**It looks like most variables stayed the same, but bodysat is still very correlated with selfestm.** 
+
+## Part 6
+**Is the model in part 4 significant in predicting `DESIRE`? Cite the test statistic, degrees of freedom, `p-value` and cite your conclusion in context.**
+
+```{r}
+summary(model2)
+```
+
+**The F-statistic for the model is 34.4 with 4 and 165 degrees of freedom. The associated p-value is very small and since the p-value is below the significance level, we reject the null hypothesis. This shows that the model is statistically significant in predicting desire and at least one of the predictor variables has a significant effect on desire.** 
+
+## Part 7
+**What are the significant predictors in the model fitted in part 4? If there are insignificant predictors, discuss why they are not significant even though they may have a clear association with the response variable based on the scatterplot in part2.** 
+
+**In summary, the significant predictors in the model are bodysat, impreal, and gender. selfestm is not statistically significant in predicting desire, this could be the result of Multicollinearity between the predictor values making sum be less significant compared to other inflated predictors.** 
+
+
+## Part 8
+**Use the model fitted in part 4 to construct a 90% prediction interval for a `DESIRE` of a female  that have `SELFESTM` index of 20, `BODYSAT`index of 5, and `IMPREAL`index of 4.  Be sure to completely interpret the interval in meaningful context.**
+
+```{r}
+model3 <- data.frame(SELFESTM = 20, BODYSAT = 5, IMPREAL = 4, GENDER = "Female")
+predictioninterval <- predict(model, newdata = model3, interval = "prediction", level = 0.90)
+print(predictioninterval)
+```
+
+**This means we are 90% confident that the desire score for a female with these specific values is expected to fall within this interval. This model predicts that desire for such an individual is likely to be between 7.369 and 14.044.** 
+
+
+## Part 9
+
+**Is the prediction in Part 8 the result of extrapolation? **
+
+**The prediction is caused by the result of extrapolation.** 
+
+# Problem 2
+
+## Part 1
+**Perform a one-way ANOVA (see Module 3) to study the effect of dose alone on the rest time (response variable). This initial analysis will completely ignore the effect of the age of the rats.  Check the underlying assumptions for one-way ANOVA.  Do you see any problems?  If so, what is/are the problem(s)?**
+
+```{r}
+rats <- read.csv("ratlethargy.csv")
+ratsAOV <- aov(resttime ~ dose, data = rats)
+autoplot(ratsAOV)
+```
+
+**Linearity looks good from the Residuals vs Fitted plot, but the Normaility might be questionable as the Normal Q-Q plot has two tails that is effecting the data.** 
+
+
+## Part 2
+**Now, we will consider performing an ANCOVA instead, studying the effect of dosage but controlling for the effect of a rat's age. Start by creating a scatterplot of rest time vs. age by dosage level, with regression lines overlaid for each dosage group (use coloring to distinguish dosage groups and the lines). Comment clearly, in context, on what you see.  Does it appear that dosage of the drug has an effect on the induction of lethargy?**
+
+```{r}
+ggplot(rats, aes(x = age, y = resttime, color = factor(dose))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(title = "rest time vs age by dosage",
+       x = "rat age",
+       y = "rest time") + theme_bw()
+
+```
+
+**For each 10 more dosage you give the rat it gives a higher correlation between rest time and rat age, so the more dosage you give the higher the correlation.** 
+
+
+## Part 3
+**Fit a full interaction ANCOVA model to these data and then check the assumptions. Do there appear to be any assumption problems now? Based on this, what appeared to be the source of the assumption problems in the one-way ANOVA in Part 1?**
+
+```{r}
+ratANC <- lm(resttime ~ age * dose, data = rats)
+autoplot(ratANC)
+```
+
+**There are no violations found and the normality is fixed when converting to a ANCOVA plot. This might be because of issues like non-linearity which looked decent in the first model.** 
+
+## Part 4
+**Run a reduced F-test to see if the interaction between age and dosage level is significant.  Report your results in context, providing F-statistic value, degrees of freedom, and p-value. (Note that this test essentially asks if the effect of dosage level on induction of lethargy depends on the age of the rat).**
+
+```{r}
+ratRED <- lm(resttime ~ age + dose, data = rats)
+ratAOV2 <- anova(ratRED, ratANC)
+print(ratAOV2)
+```
+
+
+**The F-statistic value is 251.71, the df is 1 and 56 and the P-value: < 2.2e-16. The results in context indicate that the interaction between age and dosage are significant. The small p-value provides strong evidence against the null hypothesis of no interaction.** 
+
+## Part 5
+**Based on your answer to Part 4, are you able to make a general statement about the effect of dosage on the induction of lethargy?  Why or why not?  What is the complicating issue in trying to make such a broad statement?**
+
+**The F-test concludes that the effect of dosage on rest time is not cosistenet across all ages, this means that making a single statement about the effect of the dosage on all rats regardless of age differences would be too simple and does not represent the data.** 
+
+
+## Part 6
+**Interpret the estimated coefficients in the full interaction ANCOVA model in Part 3**
+
+```{r}
+summary(ratANC)
+```
+
+
+**The model shows that the interaction between age and dose is significant in influencing rest time. The p-values for age and dose indicate that their linear effects may not be significant, but the combined interaction is crucial in understanding rest time. The R-squared value indicates that this model explains 98% of variance in rest time.** 
+
+
+## Part 7
+
+**Use the appropriate model to make two different 95% confidence intervals for the mean rest time of rats under each of the following conditions, being sure to interpret and comment on the collective findings:**
+
+* For 10-month old rats that receive a 10 mg dose
+* For 10-month old rats that receive a 30 mg dose
+
+```{r}
+rat10 <- data.frame(age = 10, dose = 10)
+predict(ratANC, newdata = rat10, interval = "confidence", level = 0.95)
+rat30 <- data.frame(age = 10, dose = 30)
+predict(ratANC, newdata = rat30, interval = "confidence", level = 0.95)
+```
+
+**It is seen that the mean rest time for 10-month old rats receiving a 30 mg dose is way higher than for those receiving a 10 mg dose. The intervals do not overlap, which indicates a significant difference in rest time between the two dosage levels for rats of the same age group.** 

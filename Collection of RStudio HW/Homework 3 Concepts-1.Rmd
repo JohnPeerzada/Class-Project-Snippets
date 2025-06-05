@@ -1,0 +1,83 @@
+---
+title: "Homework 3 Concepts"
+date:  "Last complied on `r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE, 
+                      warning = FALSE, 
+                      message = FALSE)
+```
+
+
+
+
+The following problems you answered in the Homework 3 mechanics: 
+
+You manage a website where 10% of the visitors get to the checkout page with items in the cart, but only half of these actually complete the purchase.  You want to test a new button that, you hope, will increase the percentage of actual purchases.  The new button is "A" and the current button is "B". To keep the math simple, you'd like to see a 10% lift (improvement) at the usual power (0.80) and significance (0.05) levels.  You want half the visitors who get to the checkout page assigned to group "A" and the other half assigned to group "B".  Here's the question: Do you assign visitors to "A" or "B" when they first get your website or when they actually get to the checkout page?
+
+If you assign treatment when visitors first get to the website, then the difference you want to detect is a change from 5.0% to 5.5%.  How many visitors need to come to the website so that this test can be conducted?
+
+Follow on to 1: If you assign treatment when visitors finally get to the checkout page, then the difference you want to detect is a change from 50.0% to 55.0%.  How many visitors need to come to the website so that this test can be conducted? Question 1 refers to this experiment. 
+
+
+1. Which option would you prefer? Why?
+## I would prefer assigning the treatment when the visitors get to the checkout page because of simplicity, using a bigger size of effect require alot less participants to get a significant enough difference in values.
+
+As part of a class assignment in an experimental design course, a student wants to test two different pots to determine which one boils water faster, steel bottom or copper bottom.  In order to do a sample size calculation, he needs an estimate of the standard deviation.  To do so, he took one of the pots and boiled water in it six times.  The times to a rolling boil were 133, 148, 137, 142, 145 and 150 seconds.  What sample size should he use to detect a difference of 15 seconds?  By the way, if you want to create a vector of times use this: `times<-c(133, 148, 137, 142, 145, 150)`  The following questions refer to this experiment. Questions 2-5 refer to this experiment. 
+
+2. What sample size should he use to detect a difference of 5 seconds?  Use power=0.8 and $\alpha$=0.05.
+
+```{r}
+library(pwr)
+times <- c(133, 148, 137, 142, 145, 150)
+sd_estimate <- sd(times)
+effect_size <- 5
+
+sample_size <- pwr.t.test(d = effect_size / sd_estimate, 
+                          power = 0.8, 
+                          sig.level = 0.05, 
+                          type = "two.sample")$n
+
+ceiling(sample_size)
+```
+
+
+3. What is the treatment this experiment?
+## Steel bottom vs copper bottom
+
+
+4. What is the response in this experiment?
+## Time it take for a pot to get to a rolling boil
+
+
+5. This describes the student's pilot experiment to help determine standard deviation.  Criticize this pilot experiment.  
+## This experiment doesnt work ina  couple of key ways, first of all the sample size is way too small, second their are multiple confounding variables that need addressing and thirdly there isnt much to any randomization in this experiment.
+
+
+6. Design a boiling water experiment.  Describe the procedure for experimentation from start to finish. How much water will be used?  Where will you get the water?  How will "boiling" be determined?  How will the temperature be measured? How will the time be measured?    Should these all be done on the same burner? Back to Back?  On different days? why would this matter? You can use bullets or steps if this helps.
+
+* Make a bullet in markdown like this.
+* 5 cups of water
+* tap water
+* by the temperature and how strongly the bubbles are coming up
+* use a thermometer for temp. measurement
+* stopwatch for time measurement
+* Yes on the same burner
+* back to back for simplicity
+
+
+7. For the boiling water experiment, assume you will replicate, repeat the treatment, 5 times (boil water in each pot 5 different times).  Design a randomized order for this experiment where your treatments are "steel" and "copper".
+
+```{r}
+set.seed(123)
+treatments <- rep(c("Steel", "Copper"), each = 5)
+random_order <- sample(treatments, length(treatments))
+random_order
+```
+
+
+
+
